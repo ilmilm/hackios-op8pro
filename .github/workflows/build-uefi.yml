@@ -21,6 +21,11 @@ jobs:
         run: |
           python3 -m venv venv
           venv/bin/pip install -r Mu-Silicium/pip-requirements.txt
+      - name: diagnose extdeps
+        run: |
+          cd Mu-Silicium
+          source ../venv/bin/activate
+          python3 ../tools/diag_extdeps.py
       - name: build the 8 Pro UEFI (instantnoodlepPkg)
         run: |
           cd Mu-Silicium

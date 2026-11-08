@@ -2182,6 +2182,19 @@ hc_ms_since(uint64_t then)
 static int
 hc_list_is_uefis(void)
 {
+	/* While the kernel's own transfer list is in the controller, its registers must not be
+	 * read: the kernel's UFS driver runtime-suspends the controller when storage goes idle
+	 * (clock gated) and a read then stalls this core -- the device stays enumerated on USB
+	 * but nothing answers (2026-11-08, three runs). The kernel's switched_in/switched_out
+	 * counters in the shared block say whose list is in; the registers are read only once
+	 * the kernel says its list is out (it re-enables the controller on its way out). */
+	if (hc_known && block_shared.kernel_native.switched_in != 0) {
+		flush_dcache((uint64_t)(uintptr_t)&block_shared.kernel_native,
+		    (uint64_t)(uintptr_t)&block_shared.kernel_native + sizeof(block_shared.kernel_native));
+		if (block_shared.kernel_native.switched_in != block_shared.kernel_native.switched_out) {
+			return 0;
+		}
+	}
 	return !hc_known || (hc_rd(HC_UTRLBA) == hc_uefi_lo && hc_rd(HC_UTRLBAU) == hc_uefi_hi &&
 	       (hc_rd(HC_UTRLRSR) & 1) != 0);
 }
@@ -2209,6 +2222,18 @@ hc_take_back(const char *when)
 
 	if (!hc_known) {
 		return;
+	}
+	/* The kernel may have left its own list in and the controller runtime-suspended: touching
+	 * it would stall this core. Storage is over for the session either way (the log lives in
+	 * RAM); leave the controller alone, hc_list_is_uefis refuses the I/O. */
+	if (block_shared.kernel_native.switched_in != block_shared.kernel_native.switched_out) {
+		flush_dcache((uint64_t)(uintptr_t)&block_shared.kernel_native,
+		    (uint64_t)(uintptr_t)&block_shared.kernel_native + sizeof(block_shared.kernel_native));
+		if (block_shared.kernel_native.switched_in != block_shared.kernel_native.switched_out) {
+			print("ufs: %s: the kernel's list is still in and the controller may be suspended: not touching it
+", when);
+			return;
+		}
 	}
 	lo = hc_rd(HC_UTRLBA);
 	hi = hc_rd(HC_UTRLBAU);
@@ -4543,6 +4568,8 @@ fb_command(char *cmd)
 			/* the kernel looks at this once a second and comes back as it does when its time is up */
 			if (busy) {
 				((struct kernel_live *)(uintptr_t)running_live)->stop = 1;
+				flush_dcache((uint64_t)(uintptr_t)running_live,
+				    (uint64_t)(uintptr_t)running_live + 0x1000);
 			}
 			fb_reply("OKAY", "");
 		} else if (starts_with(cmd, "getvar:")) {

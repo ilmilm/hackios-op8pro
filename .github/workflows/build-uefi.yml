@@ -39,8 +39,11 @@ jobs:
         run: |
           export UEFI_TARGET=instantnoodlep FD_BASE=0x9FC00000 FD_SIZE=0x300000 PAYLOAD_BASE=0xF0000000
           python3 xnuloader/mkpayload.py loader.efi=xnuloader/loader.efi --usb -o out-payload.bin
+          find Mu-Silicium -iname "*.fd" | head -4 || true
+          export UEFI_FD=$(find Mu-Silicium -iname "SILICIUM_UEFI.fd" | head -1)
+          echo "UEFI_FD=$UEFI_FD"
           python3 mkxnuimg.py -p out-payload.bin -o instantnoodlep-boot.img
-          FD=$(find Mu-Silicium -name "SILICIUM_UEFI.fd" | head -1) && [ -n "$FD" ] && cp "$FD" .
+          cp "${UEFI_FD:-missing}" . 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: instantnoodlep-uefi

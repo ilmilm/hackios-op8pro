@@ -13,7 +13,7 @@ jobs:
       - name: apt deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git curl tar xz make clang llvm \
+          sudo apt-get install -y --no-install-recommends git curl tar xz-utils make clang llvm \
             flex bison m4 perl python3 autoconf automake libtool libtool-bin pkg-config \
             rsync cpio zlib1g-dev libssl-dev libxml2-dev libncurses-dev libtirpc-dev gawk \
             bc file patch uuid-dev python3-venv

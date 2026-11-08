@@ -2230,8 +2230,7 @@ hc_take_back(const char *when)
 		flush_dcache((uint64_t)(uintptr_t)&block_shared.kernel_native,
 		    (uint64_t)(uintptr_t)&block_shared.kernel_native + sizeof(block_shared.kernel_native));
 		if (block_shared.kernel_native.switched_in != block_shared.kernel_native.switched_out) {
-			print("ufs: %s: the kernel's list is still in and the controller may be suspended: not touching it
-", when);
+			print("ufs: %s: the kernel's list is still in and the controller may be suspended: not touching it\n", when);
 			return;
 		}
 	}

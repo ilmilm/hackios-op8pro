@@ -16,16 +16,8 @@ scopes = sm.GetActiveScopes()
 print("workspace:", os.path.abspath(root) if (os := __import__("os")) else root)
 print("scopes:", scopes)
 
+import json
 build_env, shell_env = sde.BootstrapEnvironment(root, scopes, None)
 for d in build_env.extdeps:
-    print("== extdep:", d.name)
-    print("   version:", d.version)
-    print("   descriptor_location:", d.descriptor_location)
-    print("   contents_dir:", d.contents_dir)
-    print("   state_file_path:", d.state_file_path)
-    print("   published_path:", d.published_path)
-    try:
-        r = d.verify(shell_env)
-    except Exception as e:
-        r = f"EXCEPTION {e}"
-    print("   verify:", r)
+    print("== extdep dict ==")
+    print(json.dumps(d, indent=1, default=str))

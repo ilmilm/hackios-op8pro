@@ -37,10 +37,10 @@ jobs:
           ./build.sh
       - name: assemble the fastboot boot image
         run: |
-          python3 xnuloader/mkpayload.py kernel=prebuilt/mach.development.bcm2837 --usb -o out-payload.bin
+          export UEFI_TARGET=instantnoodlep FD_BASE=0x9FC00000 FD_SIZE=0x300000 PAYLOAD_BASE=0xF0000000
+          python3 xnuloader/mkpayload.py loader.efi=xnuloader/loader.efi kernel=prebuilt/mach.development.bcm2837 --usb -o out-payload.bin
           python3 mkxnuimg.py -p out-payload.bin -o instantnoodlep-boot.img
           FD=$(find Mu-Silicium -name "SILICIUM_UEFI.fd" | head -1) && [ -n "$FD" ] && cp "$FD" .
-          find Mu-Silicium -name "*.fd" | head -4
       - uses: actions/upload-artifact@v4
         with:
           name: instantnoodlep-uefi

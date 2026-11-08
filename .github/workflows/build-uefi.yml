@@ -14,7 +14,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends nasm acpica-tools uuid-dev \
-            build-essential gcc-aarch64-linux-gnu clang lld llvm python3-venv git
+            build-essential gcc-aarch64-linux-gnu clang lld llvm python3-venv git mono-runtime ca-certificates-mono
       - name: apply the Mu-Silicium port
         run: uefi/apply.sh
       - name: python venv

@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$(readlink -f "$0")")"
 MU=../Mu-Silicium
 [ -e $MU ] && { echo "uefi/apply.sh: $MU already exists"; exit 1; }
-git clone https://github.com/Project-Silicium/Mu-Silicium.git $MU
+git clone --config core.autocrlf=false https://github.com/Project-Silicium/Mu-Silicium.git $MU
 git -C $MU checkout -q "$(cat BASE)"
 git -C $MU submodule update --init --recursive
 git -C $MU apply --3way --whitespace=nowarn "$PWD/mu-silicium.patch" 2>/dev/null ||   patch -d $MU -p1 --fuzz=3 --no-backup-if-mismatch < "$PWD/mu-silicium.patch"

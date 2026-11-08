@@ -24,9 +24,13 @@ jobs:
       - name: build the 8 Pro UEFI (instantnoodlepPkg)
         run: |
           cd Mu-Silicium
-          D=BaseTools/Bin/mu_nasm_extdep/Linux-x86-64
-          mkdir -p $D && ln -sf /usr/bin/nasm $D/nasm && ln -sf /usr/bin/ndisasm $D/ndisasm
-          echo 'version: 20016.1.1' > BaseTools/Bin/mu_nasm_extdep/extdep_state.yaml
+          mkdir -p Build
+          for p in Linux-x86-64 Linux-aarch64 Linux-arm64; do
+            D=Mu_Basecore/BaseTools/Bin/mu_nasm_extdep/$p
+            mkdir -p $D
+            ln -sf /usr/bin/nasm $D/nasm && ln -sf /usr/bin/ndisasm $D/ndisasm
+          done
+          echo 'version: 20016.1.1' > Mu_Basecore/BaseTools/Bin/mu_nasm_extdep/extdep_state.yaml
           source ../venv/bin/activate
           python3 build_uefi.py -d instantnoodlep -r RELEASE
       - name: build the XNU loader

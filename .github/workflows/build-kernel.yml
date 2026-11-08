@@ -1,0 +1,71 @@
+name: build-kernel
+on:
+  workflow_dispatch:
+  push:
+    branches: [instantnoodlep]
+    paths: ['xnu/**', 'xnu-deps/**', 'xnu-env.sh', '.github/workflows/build-kernel.yml']
+
+jobs:
+  kernel:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: apt deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git curl tar xz make clang llvm \
+            flex bison m4 perl python3 autoconf automake libtool libtool-bin pkg-config \
+            rsync cpio zlib1g-dev libssl-dev libxml2-dev libncurses-dev libtirpc-dev gawk \
+            bc file patch uuid-dev python3-venv
+      - name: Install theos (cctools + iPhoneOS16.5.sdk)
+        run: |
+          set -e
+          THEOS_DIR="$HOME/theos"
+          if [ ! -f "$THEOS_DIR/Makefile" ]; then
+            rm -rf "$THEOS_DIR"
+            git clone --recursive --depth 1 https://github.com/theos/theos.git "$THEOS_DIR"
+          fi
+          if [ ! -x "$THEOS_DIR/toolchain/linux/iphone/bin/ld" ]; then
+            rm -rf /tmp/tc && mkdir -p /tmp/tc "$THEOS_DIR/toolchain/linux/iphone"
+            for attempt in 1 2 3 4 5 6 7 8; do
+              curl -fL --retry 3 --retry-delay 10 -C - -o /tmp/tc/tc.tar.xz \
+                "https://github.com/L1ghtmann/llvm-project/releases/latest/download/iOSToolchain-$(uname -m).tar.xz" && break
+              echo "toolchain download attempt $attempt failed; retrying"
+              sleep 20
+            done
+            test -s /tmp/tc/tc.tar.xz
+            tar -xJf /tmp/tc/tc.tar.xz -C /tmp/tc
+            tar_root=/tmp/tc
+            [ -d /tmp/tc/bin ] || tar_root=$(find /tmp/tc -maxdepth 4 -type d -name bin -printf '%h\n' | head -1)
+            cp -a "$tar_root"/. "$THEOS_DIR/toolchain/linux/iphone/"
+          fi
+          if [ ! -d "$THEOS_DIR/sdks/iPhoneOS16.5.sdk" ]; then
+            rm -rf /tmp/sdkrepo
+            git clone --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git /tmp/sdkrepo
+            git -C /tmp/sdkrepo sparse-checkout set iPhoneOS16.5.sdk
+            mkdir -p "$THEOS_DIR/sdks"
+            mv /tmp/sdkrepo/iPhoneOS16.5.sdk "$THEOS_DIR/sdks/"
+          fi
+          test -x "$THEOS_DIR/toolchain/linux/iphone/bin/ld"
+          test -d "$THEOS_DIR/sdks/iPhoneOS16.5.sdk"
+          echo "THEOS=$THEOS_DIR" >> "$GITHUB_ENV"
+      - name: xnu-deps stage1 (sources, host tools, SDK)
+        run: xnu-deps/setup.sh --stage1
+      - name: xnu/apply (patch XNU)
+        run: xnu/apply.sh
+      - name: xnu-deps stage2 (libraries against the kernel headers)
+        run: xnu-deps/setup.sh --stage2
+      - name: build the kernel
+        run: |
+          touch out/.kernel-start 2>/dev/null || mkdir -p out && touch out/.kernel-start
+          ./xnu-build.sh -j"$(nproc)" -k > out/kernel-build.log 2>&1 || true
+          tail -5 out/kernel-build.log
+      - name: check the kernel binary
+        run: |
+          K=xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837
+          ls -la "$K"
+          test -f "$K"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instantnoodlep-kernel
+          path: xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837

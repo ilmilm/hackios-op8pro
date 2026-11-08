@@ -1,0 +1,47 @@
+name: build-uefi
+on:
+  workflow_dispatch:
+  push:
+    branches: [instantnoodlep]
+    paths: ['uefi/**', 'xnuloader/**', '.github/workflows/build-uefi.yml']
+
+jobs:
+  uefi:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: apt deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm acpica-tools uuid-dev \
+            build-essential gcc-aarch64-linux-gnu clang lld python3-venv git
+      - name: apply the Mu-Silicium port
+        run: uefi/apply.sh
+      - name: python venv
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install -r Mu-Silicium/pip-requirements.txt
+      - name: build the 8 Pro UEFI (instantnoodlepPkg)
+        run: |
+          cd Mu-Silicium
+          D=BaseTools/Bin/mu_nasm_extdep/Linux-x86-64
+          mkdir -p $D && ln -sf /usr/bin/nasm $D/nasm && ln -sf /usr/bin/ndisasm $D/ndisasm
+          echo 'version: 20016.1.1' > BaseTools/Bin/mu_nasm_extdep/extdep_state.yaml
+          source ../venv/bin/activate
+          python3 build_uefi.py -d instantnoodlep -r RELEASE
+      - name: build the XNU loader
+        run: |
+          cd xnuloader
+          ./build.sh
+      - name: assemble the fastboot boot image
+        run: |
+          python3 xnuloader/mkpayload.py kernel=prebuilt/mach.development.bcm2837 --usb -o out-payload.bin
+          python3 mkxnuimg.py -p out-payload.bin -o instantnoodlep-boot.img
+          cp Mu-Silicium/Build/instantnoodlepPkg/RELEASE_CLANGPDB/FV/SILICIUM_UEFI.fd .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: instantnoodlep-uefi
+          path: |
+            SILICIUM_UEFI.fd
+            instantnoodlep-boot.img
+            xnuloader/loader.efi

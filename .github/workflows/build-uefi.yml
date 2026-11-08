@@ -39,7 +39,8 @@ jobs:
         run: |
           python3 xnuloader/mkpayload.py kernel=prebuilt/mach.development.bcm2837 --usb -o out-payload.bin
           python3 mkxnuimg.py -p out-payload.bin -o instantnoodlep-boot.img
-          cp Mu-Silicium/Build/instantnoodlepPkg/RELEASE_CLANGPDB/FV/SILICIUM_UEFI.fd .
+          FD=$(find Mu-Silicium -name "SILICIUM_UEFI.fd" | head -1) && [ -n "$FD" ] && cp "$FD" .
+          find Mu-Silicium -name "*.fd" | head -4
       - uses: actions/upload-artifact@v4
         with:
           name: instantnoodlep-uefi

@@ -25,7 +25,7 @@ git fetch -q --depth 1 origin "refs/tags/$TAG:refs/tags/$TAG"      # that one re
 git checkout -q -b redwood "$TAG"
 [ "$(git rev-parse HEAD)" = "$BASE" ] || { echo "apply.sh: $TAG is $(git rev-parse HEAD), expected $BASE" >&2; false; }
 echo 'BUILD/' >> .git/info/exclude
-git apply --whitespace=nowarn "$HERE/hackios.patch"
+git apply --recount --whitespace=nowarn "$HERE/hackios.patch"
 cp -a "$HERE/files/." .
 "$HERE/hfs-stage.sh" "$DIR"            # Apple's HFS+ for the data volume, fetched like XNU (bsd/hk_hfs)
 echo "apply.sh: $DIR: $TAG + $(grep -c '^diff --git' "$HERE/hackios.patch") changed and $(find "$HERE/files" -type f | wc -l) new files"
